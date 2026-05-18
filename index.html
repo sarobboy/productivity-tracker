@@ -1,72 +1,733 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#2a6dd9" />
-    <meta name="description" content="Daily Productivity Tracker for QA Associates" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Productivity Tracker</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 
-    <!-- Tabler Icons (used throughout the app) -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
-    />
+  <!-- ═══════════════════════════════════════════════════════════════
+       ✏️  EDIT YOUR SETTINGS HERE
+  ═══════════════════════════════════════════════════════════════ -->
+  <script>
+    // ── 1. Associate names ──────────────────────────────────────────
+    const ASSOCIATES = ["A", "B", "C"];
+    //  e.g.  ["John", "Priya", "David", "Sara"]
 
-    <!-- App favicon (browser tab icon) -->
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    // ── 2. Teams ────────────────────────────────────────────────────
+    const TEAMS = ["Team Ruby"];
+    //  e.g.  ["Team Ruby", "Team Alpha", "Team Beta"]
 
-    <title>Daily Productivity Tracker</title>
+    // ── 3. Master PIN ───────────────────────────────────────────────
+    const MASTER_PIN = "1234";
 
-    <style>
-      /* Reset & base */
-      *, *::before, *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+    // ── 4. Firebase config ──────────────────────────────────────────
+    //  Create a FREE Firebase project at https://console.firebase.google.com
+    //  → Add a web app → copy the firebaseConfig values below
+    //  → Go to Realtime Database → Create database → Start in test mode
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyB5cTWjkMEcJCIcfieIRumcbsbuL7Pjxxs",
+      authDomain:        "productivity-tracker-8556b.firebaseapp.com",
+      databaseURL:       "https://productivity-tracker-8556b-default-rtdb.firebaseio.com",
+      projectId:         "productivity-tracker-8556b",
+      storageBucket:     "productivity-tracker-8556b.firebasestorage.app",
+      messagingSenderId: "588929102478",
+      appId:             "1:588929102478:web:3996f3e393bcc558f78fdf"
+    };
+  </script>
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding: 2rem 1rem; }
+    #app { max-width: 720px; margin: 0 auto; }
+    #app.wide { max-width: 940px; }
+
+    h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .subtitle { font-size: 13px; color: #666; margin-top: 4px; margin-bottom: 1.5rem; }
+
+    .section { background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .sec-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; color: #666; font-weight: 500; }
+    .req { color: #d04040; margin-left: 2px; }
+
+    input, select { font-size: 14px; font-family: inherit; border: 1px solid #e0e0da; border-radius: 8px; padding: 7px 10px; background: #fff; color: #1a1a1a; outline: none; width: 100%; height: 36px; transition: border-color .15s; }
+    input:focus, select:focus { border-color: #5b8fd4; box-shadow: 0 0 0 3px rgba(91,143,212,.12); }
+    input[type=number] { text-align: center; }
+    input.sm, select.sm { height: 32px; font-size: 13px; }
+
+    .col-hd { display: grid; gap: 8px; margin-bottom: 4px; }
+    .col-hd span { font-size: 11px; color: #888; font-weight: 500; }
+    .test-grid  { grid-template-columns: 1fr 150px 90px 36px; }
+    .meet-grid  { grid-template-columns: 1fr 150px 90px 36px; }
+    .etest-grid { grid-template-columns: 1fr 140px 80px 32px; }
+    .emeet-grid { grid-template-columns: 1fr 140px 80px 32px; }
+
+    .row-item { display: grid; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .rm-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; padding: 4px 6px; border-radius: 6px; line-height: 1; }
+    .rm-btn:hover { background: #f0f0ea; color: #333; }
+
+    .add-btn { font-size: 13px; color: #3a7bd5; background: none; border: 1px dashed #93b8ea; border-radius: 8px; padding: 6px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-family: inherit; }
+    .add-btn:hover { background: #edf3fc; }
+    .add-btn.sm { font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+
+    .total-bar { display: flex; justify-content: space-between; border-top: 1px solid #f0f0ea; margin-top: 8px; padding-top: 8px; font-size: 13px; }
+    .total-bar span { color: #666; }
+
+    .sum-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .sum-card { background: #f5f5f0; border-radius: 8px; padding: 12px 14px; text-align: center; }
+    .sum-card .lbl { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .sum-card .val { font-size: 24px; font-weight: 600; color: #1a1a1a; }
+    .sum-card .unt { font-size: 11px; color: #aaa; }
+
+    .warn-txt { color: #b07a10; font-size: 12px; margin-top: 8px; display: none; align-items: center; gap: 4px; }
+
+    /* Buttons */
+    .btn { border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: background .15s; border: none; }
+    .btn-primary { background: #2a6dd9; color: #fff; }
+    .btn-primary:hover { background: #1d5bbf; }
+    .btn-outline { background: #fff; color: #1a1a1a; border: 1px solid #d0d0ca; }
+    .btn-outline:hover { background: #f5f5f0; }
+    .btn-danger { background: none; color: #c04040; border: 1px solid #e5a0a0; }
+    .btn-danger:hover { background: #fdf0f0; }
+    .btn-submit { background: #2a6dd9; color: #fff; border: none; padding: 11px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; }
+    .btn-submit:hover { background: #1d5bbf; }
+
+    .err-msg { color: #d04040; font-size: 13px; margin-bottom: 10px; display: none; align-items: center; gap: 4px; }
+    .actions { display: flex; gap: 10px; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+
+    /* Landing */
+    .landing { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center; gap: 1.5rem; }
+    .landing-icon { font-size: 40px; color: #2a6dd9; }
+    .landing h1 { font-size: 24px; font-weight: 600; }
+    .landing p { font-size: 14px; color: #666; max-width: 340px; }
+    .landing-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+    /* Success */
+    .success { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 1rem; }
+    .success-icon { width: 64px; height: 64px; background: #e6f4ec; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #2a9d6e; }
+    .success h2 { font-size: 20px; font-weight: 600; }
+    .success p { font-size: 14px; color: #666; max-width: 340px; }
+    .success-note { background: #f0f7ff; border: 1px solid #cde0f8; border-radius: 10px; padding: 10px 20px; font-size: 13px; color: #2a5da8; }
+
+    /* Login */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+    .login-card { background: #fff; border: 1px solid #e5e5e0; border-radius: 14px; padding: 2rem; width: 100%; max-width: 340px; text-align: center; }
+    .login-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .login-card p { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+    .pin-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 1rem; }
+    .pin-row input { width: 48px; height: 52px; text-align: center; font-size: 22px; font-weight: 700; border: 1.5px solid #e0e0da; border-radius: 10px; }
+    .pin-row input.err { border-color: #e5a0a0; }
+    .login-err { color: #d04040; font-size: 13px; margin-top: 8px; display: none; }
+    .login-hint { font-size: 11px; color: #bbb; margin-top: 1rem; }
+
+    /* Dashboard */
+    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+    .dash-header h1 { font-size: 20px; }
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 1rem; }
+    .stat-card { background: #fff; border: 1px solid #e5e5e0; border-radius: 10px; padding: 12px 14px; }
+    .stat-card .slbl { font-size: 11px; color: #888; margin-bottom: 4px; }
+    .stat-card .sval { font-size: 22px; font-weight: 600; }
+
+    .sub-list { background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; overflow: hidden; }
+    .sub-list-hd { padding: .75rem 1.25rem; border-bottom: 1px solid #f0f0ea; display: flex; align-items: center; justify-content: space-between; }
+    .sub-list-hd h3 { font-size: 13px; font-weight: 600; color: #555; }
+    .count-badge { font-size: 12px; color: #999; background: #f0f0ea; padding: 2px 8px; border-radius: 20px; }
+    .empty { padding: 2rem; text-align: center; color: #aaa; font-size: 14px; }
+    .empty i { font-size: 24px; display: block; margin-bottom: 8px; }
+
+    .sub-item { border-bottom: 1px solid #f5f5f0; }
+    .sub-item:last-child { border-bottom: none; }
+    .sub-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: .75rem 1.25rem; cursor: pointer; }
+    .sub-row:hover { background: #fafaf8; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; background: #dce8f8; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; color: #2a5da8; flex-shrink: 0; }
+    .sub-name { font-weight: 500; font-size: 14px; }
+    .sub-meta { font-size: 12px; color: #888; }
+    .badges { display: flex; gap: 4px; }
+    .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+    .badge-t { background: #e1f5ee; color: #085041; }
+    .badge-m { background: #e6f1fb; color: #0c447c; }
+    .chev { font-size: 16px; color: #bbb; transition: transform .2s; }
+    .chev.open { transform: rotate(180deg); }
+
+    .sub-detail { display: none; padding: 1rem 1.25rem; background: #fafaf8; border-top: 1px solid #f0f0ea; }
+    .sub-detail.open { display: block; }
+    .detail-sec { margin-bottom: 12px; }
+    .detail-sec-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .detail-actions { display: flex; gap: 8px; padding-top: .75rem; border-top: 1px solid #ececea; margin-top: .5rem; }
+
+    /* Firebase setup notice */
+    .setup-notice { background: #fff8e6; border: 1px solid #f0d080; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; font-size: 13px; color: #7a5800; }
+    .setup-notice strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #fff; border: 1px solid #e0e0da; border-radius: 10px; padding: 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.1); opacity: 0; transform: translateY(8px); transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 580px) {
+      .row2 { grid-template-columns: 1fr; }
+      .test-grid, .meet-grid { grid-template-columns: 1fr 110px 70px 32px; }
+      .sum-grid { grid-template-columns: 1fr 1fr; }
+      .stat-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"><i class="ti ti-check" style="color:#2a9d6e"></i> <span id="toast-msg"></span></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────
+const MANUAL_TYPES  = ["Smoke testing","Exploratory testing","Bug creation","Bug verification"];
+const AUTO_TYPES    = ["Script development"];
+const MEETING_TYPES = ["Client meeting","Daily standup","Weekly standup","Internal sync","Review meeting","Other"];
+
+// ─── Firebase init ────────────────────────────────────────────────
+let db = null;
+let firebaseReady = false;
+try {
+  if (FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes("PASTE_YOUR")) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    firebaseReady = true;
+  }
+} catch(e) { console.warn("Firebase not configured:", e); }
+
+// ─── DB helpers ───────────────────────────────────────────────────
+async function loadSubmissions() {
+  if (!firebaseReady) {
+    try { return JSON.parse(localStorage.getItem("pt_subs") || "[]"); } catch { return []; }
+  }
+  const snap = await db.ref("submissions").get();
+  if (!snap.exists()) return [];
+  const obj = snap.val();
+  return Object.values(obj).sort((a,b) => a.submittedAt > b.submittedAt ? -1 : 1);
+}
+
+async function addSubmission(payload) {
+  if (!firebaseReady) {
+    const arr = await loadSubmissions();
+    arr.unshift(payload);
+    localStorage.setItem("pt_subs", JSON.stringify(arr));
+    return;
+  }
+  await db.ref("submissions/" + payload.id).set(payload);
+}
+
+async function updateSubmission(payload) {
+  if (!firebaseReady) {
+    const arr = await loadSubmissions();
+    const idx = arr.findIndex(s => s.id === payload.id);
+    if (idx >= 0) arr[idx] = payload;
+    localStorage.setItem("pt_subs", JSON.stringify(arr));
+    return;
+  }
+  await db.ref("submissions/" + payload.id).set(payload);
+}
+
+async function deleteSubmission(id) {
+  if (!firebaseReady) {
+    const arr = (await loadSubmissions()).filter(s => s.id !== id);
+    localStorage.setItem("pt_subs", JSON.stringify(arr));
+    return;
+  }
+  await db.ref("submissions/" + id).remove();
+}
+
+function listenSubmissions(cb) {
+  if (!firebaseReady) return () => {};
+  const ref = db.ref("submissions");
+  const handler = snap => {
+    if (!snap.exists()) { cb([]); return; }
+    const obj = snap.val();
+    cb(Object.values(obj).sort((a,b) => a.submittedAt > b.submittedAt ? -1 : 1));
+  };
+  ref.on("value", handler);
+  return () => ref.off("value", handler);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────
+function uid() { return "s_" + Date.now() + "_" + Math.random().toString(36).slice(2,6); }
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  document.getElementById("toast-msg").textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+function el(tag, attrs={}, children=[]) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => {
+    if (k === "style" && typeof v === "object") Object.assign(e.style, v);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  });
+  children.forEach(c => { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return e;
+}
+
+// ─── APP STATE ────────────────────────────────────────────────────
+let currentView = "landing"; // landing | associate | success | login | master
+let submittedEntry = null;
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  app.className = currentView === "master" ? "wide" : "";
+  if (currentView === "landing")   app.appendChild(renderLanding());
+  if (currentView === "associate") app.appendChild(renderAssociateForm());
+  if (currentView === "success")   app.appendChild(renderSuccess());
+  if (currentView === "login")     app.appendChild(renderLogin());
+  if (currentView === "master")    app.appendChild(renderMaster());
+}
+
+// ─── LANDING ─────────────────────────────────────────────────────
+function renderLanding() {
+  const wrap = document.createElement("div");
+  wrap.className = "landing";
+  wrap.innerHTML = `
+    <div class="landing-icon"><i class="ti ti-chart-bar"></i></div>
+    <h1>Daily productivity tracker</h1>
+    <p>Are you filling in your daily log, or accessing the master dashboard?</p>
+    <div class="landing-btns">
+      <button class="btn-submit" id="btn-assoc"><i class="ti ti-edit"></i> Fill my daily form</button>
+      <button class="btn btn-outline" id="btn-master" style="padding:12px 24px;font-size:14px;"><i class="ti ti-layout-dashboard"></i> Master dashboard</button>
+    </div>`;
+  wrap.querySelector("#btn-assoc").onclick = () => { currentView = "associate"; render(); };
+  wrap.querySelector("#btn-master").onclick = () => { currentView = "login"; render(); };
+  return wrap;
+}
+
+// ─── ASSOCIATE FORM ───────────────────────────────────────────────
+let aTests    = [];
+let aMeetings = [];
+
+function renderAssociateForm() {
+  if (!aTests.length)    aTests    = [{ id: uid(), name: "", type: MANUAL_TYPES[0], hours: "" }];
+  if (!aMeetings.length) aMeetings = [{ id: uid(), name: "", mtype: MEETING_TYPES[0], hours: "" }];
+
+  const wrap = document.createElement("div");
+
+  const calcHours = () => {
+    const tH = aTests.reduce((s,t)=>s+(parseFloat(t.hours)||0),0);
+    const mH = aMeetings.reduce((s,m)=>s+(parseFloat(m.hours)||0),0);
+    const wd = parseFloat(wrap.querySelector("#wd")?.value)||9;
+    wrap.querySelector("#t-total").textContent  = tH.toFixed(1)+" hrs";
+    wrap.querySelector("#m-total").textContent  = mH.toFixed(1)+" hrs";
+    wrap.querySelector("#s-test").textContent   = tH.toFixed(1);
+    wrap.querySelector("#s-meet").textContent   = mH.toFixed(1);
+    wrap.querySelector("#s-other").textContent  = Math.max(0,wd-tH-mH).toFixed(1);
+    wrap.querySelector("#warn").style.display   = (tH+mH>wd)?"flex":"none";
+  };
+
+  const rebuildTests = () => {
+    const list = wrap.querySelector("#test-list");
+    list.innerHTML = "";
+    aTests.forEach(t => {
+      const row = document.createElement("div");
+      row.className = "row-item test-grid";
+      row.innerHTML = `
+        <input class="name-in" placeholder="e.g. Login regression" value="${t.name}">
+        <select class="type-sel">${typeOpts(t.type)}</select>
+        <input class="hrs-in" type="number" min="0" max="24" step="0.5" placeholder="hrs" value="${t.hours}">
+        <button class="rm-btn"><i class="ti ti-x"></i></button>`;
+      row.querySelector(".name-in").oninput = e => { t.name = e.target.value; };
+      row.querySelector(".type-sel").onchange = e => { t.type = e.target.value; };
+      row.querySelector(".hrs-in").oninput = e => { t.hours = e.target.value; calcHours(); };
+      row.querySelector(".rm-btn").onclick = () => { aTests = aTests.filter(x=>x.id!==t.id); rebuildTests(); calcHours(); };
+      list.appendChild(row);
+    });
+    calcHours();
+  };
+
+  const rebuildMeetings = () => {
+    const list = wrap.querySelector("#meet-list");
+    list.innerHTML = "";
+    aMeetings.forEach(m => {
+      const row = document.createElement("div");
+      row.className = "row-item meet-grid";
+      row.innerHTML = `
+        <input class="mname-in" placeholder="e.g. Sprint review" value="${m.name}">
+        <select class="mtype-sel">${MEETING_TYPES.map(x=>`<option value="${x}" ${m.mtype===x?"selected":""}>${x}</option>`).join("")}</select>
+        <input class="mhrs-in" type="number" min="0" max="24" step="0.5" placeholder="hrs" value="${m.hours}">
+        <button class="rm-btn"><i class="ti ti-x"></i></button>`;
+      row.querySelector(".mname-in").oninput = e => { m.name = e.target.value; };
+      row.querySelector(".mtype-sel").onchange = e => { m.mtype = e.target.value; };
+      row.querySelector(".mhrs-in").oninput = e => { m.hours = e.target.value; calcHours(); };
+      row.querySelector(".rm-btn").onclick = () => { aMeetings = aMeetings.filter(x=>x.id!==m.id); rebuildMeetings(); calcHours(); };
+      list.appendChild(row);
+    });
+    calcHours();
+  };
+
+  wrap.innerHTML = `
+    <h1><i class="ti ti-chart-bar"></i> Daily productivity log</h1>
+    <p class="subtitle">Fill in all your details and click Submit. Data goes directly to the master dashboard.</p>
+    ${!firebaseReady ? `<div class="setup-notice"><strong>⚠️ Firebase not configured</strong>Data will be saved locally on this device only. To sync across devices, add your Firebase config in the HTML file.</div>` : ""}
+
+    <div class="section">
+      <div class="sec-title"><i class="ti ti-user"></i> Associate details</div>
+      <div class="row2">
+        <div class="field"><label>Name<span class="req">*</span></label>
+          <select id="sel-name"><option value="">Select name…</option>${ASSOCIATES.map(a=>`<option>${a}</option>`).join("")}</select></div>
+        <div class="field"><label>Date<span class="req">*</span></label>
+          <input type="date" id="sel-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Team / project<span class="req">*</span></label>
+          <select id="sel-team"><option value="">Select team…</option>${TEAMS.map(t=>`<option>${t}</option>`).join("")}</select></div>
+        <div class="field"><label>Total work hours</label>
+          <input type="number" id="wd" min="1" max="24" step="0.5" value="9"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title"><i class="ti ti-bug"></i> Testing activities</div>
+      <div class="col-hd test-grid"><span>Testing item / description</span><span>Type</span><span>Hours</span><span></span></div>
+      <div id="test-list"></div>
+      <button class="add-btn" id="add-test"><i class="ti ti-plus"></i> Add testing item</button>
+      <div class="total-bar"><span>Total testing hours</span><strong id="t-total">0 hrs</strong></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title"><i class="ti ti-users"></i> Meetings attended</div>
+      <div class="col-hd meet-grid"><span>Meeting name</span><span>Meeting type</span><span>Hours</span><span></span></div>
+      <div id="meet-list"></div>
+      <button class="add-btn" id="add-meet"><i class="ti ti-plus"></i> Add meeting</button>
+      <div class="total-bar"><span>Total meeting hours</span><strong id="m-total">0 hrs</strong></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title"><i class="ti ti-calendar-stats"></i> Day summary</div>
+      <div class="sum-grid">
+        <div class="sum-card"><div class="lbl">Testing</div><div class="val" id="s-test">0</div><div class="unt">hours</div></div>
+        <div class="sum-card"><div class="lbl">Meetings</div><div class="val" id="s-meet">0</div><div class="unt">hours</div></div>
+        <div class="sum-card"><div class="lbl">Other / buffer</div><div class="val" id="s-other">9</div><div class="unt">hours</div></div>
+      </div>
+      <div class="warn-txt" id="warn"><i class="ti ti-alert-triangle"></i> Hours exceed total work hours.</div>
+    </div>
+
+    <div class="err-msg" id="err"><i class="ti ti-alert-circle"></i> Please fill in name, date, and team.</div>
+    <div class="actions">
+      <button class="btn-submit" id="btn-submit"><i class="ti ti-send"></i> Submit</button>
+    </div>`;
+
+  wrap.querySelector("#wd").oninput = calcHours;
+  wrap.querySelector("#add-test").onclick = () => { aTests.push({ id: uid(), name: "", type: MANUAL_TYPES[0], hours: "" }); rebuildTests(); };
+  wrap.querySelector("#add-meet").onclick = () => { aMeetings.push({ id: uid(), name: "", mtype: MEETING_TYPES[0], hours: "" }); rebuildMeetings(); };
+
+  wrap.querySelector("#btn-submit").onclick = async () => {
+    const name = wrap.querySelector("#sel-name").value;
+    const date = wrap.querySelector("#sel-date").value;
+    const team = wrap.querySelector("#sel-team").value;
+    const err  = wrap.querySelector("#err");
+    if (!name || !date || !team) { err.style.display = "flex"; return; }
+    err.style.display = "none";
+    const btn = wrap.querySelector("#btn-submit");
+    btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader"></i> Submitting…`;
+    const wd = parseFloat(wrap.querySelector("#wd").value)||9;
+    const tH = aTests.reduce((s,t)=>s+(parseFloat(t.hours)||0),0);
+    const mH = aMeetings.reduce((s,m)=>s+(parseFloat(m.hours)||0),0);
+    const payload = {
+      id: uid(), submittedAt: new Date().toISOString(),
+      name, date, team, workday: wd,
+      testingHrs: tH.toFixed(1), meetingHrs: mH.toFixed(1), otherHrs: Math.max(0,wd-tH-mH).toFixed(1),
+      tests: aTests.map(t=>({ name:t.name, category:MANUAL_TYPES.includes(t.type)?"Manual":"Automation", type:t.type, hours:parseFloat(t.hours)||0 })),
+      meetings: aMeetings.map(m=>({ name:m.name, mtype:m.mtype, hours:parseFloat(m.hours)||0 })),
+    };
+    await addSubmission(payload);
+    submittedEntry = payload;
+    aTests = []; aMeetings = [];
+    currentView = "success"; render();
+  };
+
+  rebuildTests(); rebuildMeetings();
+  return wrap;
+}
+
+// ─── SUCCESS ──────────────────────────────────────────────────────
+function renderSuccess() {
+  const wrap = document.createElement("div");
+  wrap.className = "success";
+  wrap.innerHTML = `
+    <div class="success-icon"><i class="ti ti-check"></i></div>
+    <h2>Submitted successfully!</h2>
+    <p>Your data for <strong>${submittedEntry?.date||""}</strong> has been sent directly to the master dashboard.</p>
+    <div class="success-note"><i class="ti ti-info-circle"></i> The master will review and finalise your entry.</div>`;
+  return wrap;
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────
+let pinErr = false;
+function renderLogin() {
+  const wrap = document.createElement("div");
+  wrap.className = "login-wrap";
+  wrap.innerHTML = `
+    <div class="login-card">
+      <div style="font-size:36px;color:#2a6dd9;margin-bottom:12px"><i class="ti ti-lock"></i></div>
+      <h2>Master dashboard</h2>
+      <p>Enter your 4-digit PIN</p>
+      <div class="pin-row">
+        ${[0,1,2,3].map(i=>`<input type="password" maxlength="1" inputmode="numeric" id="pin-${i}" class="${pinErr?"err":""}">`).join("")}
+      </div>
+      <button class="btn btn-primary" id="unlock-btn" style="width:100%;justify-content:center">Unlock</button>
+      <p class="login-err" id="login-err" ${pinErr?"style='display:block'":""}>Incorrect PIN. Try again.</p>
+      <p class="login-hint">Default PIN: 1234</p>
+    </div>`;
+
+  const inputs = [0,1,2,3].map(i => wrap.querySelector(`#pin-${i}`));
+  inputs.forEach((inp, i) => {
+    inp.oninput = () => {
+      if (inp.value && i < 3) inputs[i+1].focus();
+      if (inp.value && i === 3) tryUnlock();
+    };
+  });
+  wrap.querySelector("#unlock-btn").onclick = tryUnlock;
+  function tryUnlock() {
+    const pin = inputs.map(x=>x.value).join("");
+    if (pin === MASTER_PIN) { pinErr = false; currentView = "master"; render(); }
+    else { pinErr = true; render(); }
+  }
+  setTimeout(() => inputs[0]?.focus(), 50);
+  return wrap;
+}
+
+// ─── MASTER DASHBOARD ─────────────────────────────────────────────
+let masterSubs = [];
+let expandedId = null;
+let stopListening = null;
+
+function renderMaster() {
+  const wrap = document.createElement("div");
+
+  const buildContent = (subs) => {
+    masterSubs = subs;
+    const avgT = subs.length ? (subs.reduce((a,s)=>a+parseFloat(s.testingHrs||0),0)/subs.length).toFixed(1) : "—";
+    const avgM = subs.length ? (subs.reduce((a,s)=>a+parseFloat(s.meetingHrs||0),0)/subs.length).toFixed(1) : "—";
+    const people = new Set(subs.map(s=>s.name)).size;
+
+    wrap.innerHTML = `
+      <div class="dash-header">
+        <h1><i class="ti ti-layout-dashboard"></i> Master dashboard</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" id="exp-btn"><i class="ti ti-download"></i> Export CSV</button>
+        </div>
+      </div>
+      ${!firebaseReady ? `<div class="setup-notice"><strong>⚠️ Firebase not configured — data is local only</strong>To receive submissions from associates on other devices, add Firebase config in the HTML file.</div>` : ""}
+      <div class="stat-row">
+        <div class="stat-card"><div class="slbl">Submissions</div><div class="sval">${subs.length}</div></div>
+        <div class="stat-card"><div class="slbl">Associates</div><div class="sval">${people}</div></div>
+        <div class="stat-card"><div class="slbl">Avg testing hrs</div><div class="sval">${avgT}</div></div>
+        <div class="stat-card"><div class="slbl">Avg meeting hrs</div><div class="sval">${avgM}</div></div>
+      </div>
+      <div class="sub-list">
+        <div class="sub-list-hd"><h3>Submissions</h3><span class="count-badge">${subs.length} ${subs.length===1?"entry":"entries"}</span></div>
+        <div id="sub-items">
+          ${subs.length === 0 ? `<div class="empty"><i class="ti ti-inbox"></i>No submissions yet. Associates will appear here automatically.</div>` : subs.map((s,i) => buildSubHTML(s,i)).join("")}
+        </div>
+      </div>`;
+
+    wrap.querySelector("#exp-btn").onclick = exportCSV;
+
+    subs.forEach((s, i) => {
+      const row = wrap.querySelector(`#srow-${i}`);
+      if (!row) return;
+      row.onclick = () => {
+        expandedId = expandedId === s.id ? null : s.id;
+        buildContent(masterSubs);
+      };
+      const detail = wrap.querySelector(`#detail-${i}`);
+      if (detail && expandedId === s.id) {
+        detail.classList.add("open");
+        wireDetail(wrap, s, i);
       }
+    });
+  };
 
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: #f5f5f0;
-        color: #1a1a1a;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
+  // Start real-time listener
+  if (stopListening) stopListening();
+  if (firebaseReady) {
+    stopListening = listenSubmissions(subs => buildContent(subs));
+  } else {
+    loadSubmissions().then(subs => buildContent(subs));
+    stopListening = null;
+  }
 
-      #root {
-        min-height: 100vh;
-      }
+  buildContent(masterSubs);
+  return wrap;
+}
 
-      /* Prevent number input spinners */
-      input[type="number"]::-webkit-inner-spin-button,
-      input[type="number"]::-webkit-outer-spin-button {
-        opacity: 1;
-      }
+function buildSubHTML(s, i) {
+  const initials = (s.name||"?").slice(0,2).toUpperCase();
+  const time = new Date(s.submittedAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  return `
+    <div class="sub-item">
+      <div class="sub-row" id="srow-${i}">
+        <div class="avatar">${initials}</div>
+        <div>
+          <div class="sub-name">${s.name} <span style="font-weight:400;color:#888;font-size:13px">· ${s.team||""}</span></div>
+          <div class="sub-meta">${s.date} &nbsp;·&nbsp; ${time}</div>
+        </div>
+        <div class="badges">
+          <span class="badge badge-t"><i class="ti ti-bug"></i> ${s.testingHrs}h</span>
+          <span class="badge badge-m"><i class="ti ti-users"></i> ${s.meetingHrs}h</span>
+        </div>
+        <i class="ti ti-chevron-down chev ${expandedId===s.id?"open":""}"></i>
+      </div>
+      <div class="sub-detail" id="detail-${i}">
+        ${buildDetailHTML(s, i)}
+      </div>
+    </div>`;
+}
 
-      /* Scrollbar styling (optional, looks cleaner) */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f0f0ea;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #ccc;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #aaa;
-      }
-    </style>
-  </head>
+function buildDetailHTML(s, i) {
+  const tests = (s.tests||[]).map((t,ti)=>`
+    <div class="row-item etest-grid" data-ti="${ti}">
+      <input class="et-name sm" value="${(t.name||"").replace(/"/g,"&quot;")}">
+      <select class="et-type sm">${typeOpts(t.type)}</select>
+      <input class="et-hrs sm" type="number" min="0" max="24" step="0.5" value="${t.hours||""}">
+      <button class="rm-btn et-rm"><i class="ti ti-x"></i></button>
+    </div>`).join("");
+  const meets = (s.meetings||[]).map((m,mi)=>`
+    <div class="row-item emeet-grid" data-mi="${mi}">
+      <input class="em-name sm" value="${(m.name||"").replace(/"/g,"&quot;")}">
+      <select class="em-mtype sm">${MEETING_TYPES.map(x=>`<option ${m.mtype===x?"selected":""}>${x}</option>`).join("")}</select>
+      <input class="em-hrs sm" type="number" min="0" max="24" step="0.5" value="${m.hours||""}">
+      <button class="rm-btn em-rm"><i class="ti ti-x"></i></button>
+    </div>`).join("");
+  return `
+    <div class="detail-sec">
+      <div class="detail-sec-title">Associate info</div>
+      <div class="row2" style="margin-bottom:8px">
+        <div class="field"><label>Name</label><select class="sm ed-name">${ASSOCIATES.map(a=>`<option ${s.name===a?"selected":""}>${a}</option>`).join("")}</select></div>
+        <div class="field"><label>Date</label><input type="date" class="sm ed-date" value="${s.date}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Team</label><select class="sm ed-team">${TEAMS.map(t=>`<option ${s.team===t?"selected":""}>${t}</option>`).join("")}</select></div>
+        <div class="field"><label>Work hours</label><input type="number" class="sm ed-wd" min="1" max="24" step="0.5" value="${s.workday||9}"></div>
+      </div>
+    </div>
+    <div class="detail-sec">
+      <div class="detail-sec-title">Testing activities</div>
+      <div id="et-list-${i}">${tests}</div>
+      <button class="add-btn sm et-add"><i class="ti ti-plus"></i> Add row</button>
+    </div>
+    <div class="detail-sec">
+      <div class="detail-sec-title">Meetings</div>
+      <div id="em-list-${i}">${meets}</div>
+      <button class="add-btn sm em-add"><i class="ti ti-plus"></i> Add row</button>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-primary ed-save"><i class="ti ti-device-floppy"></i> Save changes</button>
+      <button class="btn btn-danger ed-del"><i class="ti ti-trash"></i> Delete</button>
+    </div>`;
+}
 
-  <body>
-    <noscript>
-      You need to enable JavaScript to run this application.
-    </noscript>
+function wireDetail(wrap, s, i) {
+  const det = wrap.querySelector(`#detail-${i}`);
+  if (!det) return;
 
-    <div id="root"></div>
-  </body>
+  // editable local copy
+  let ec = JSON.parse(JSON.stringify(s));
+  ec.tests    = (ec.tests||[]).map(t=>({...t,_id:uid()}));
+  ec.meetings = (ec.meetings||[]).map(m=>({...m,_id:uid()}));
+
+  const recalc = () => {
+    const tH = ec.tests.reduce((a,t)=>a+(parseFloat(t.hours)||0),0);
+    const mH = ec.meetings.reduce((a,m)=>a+(parseFloat(m.hours)||0),0);
+    ec.testingHrs = tH.toFixed(1);
+    ec.meetingHrs = mH.toFixed(1);
+    ec.otherHrs   = Math.max(0,(ec.workday||9)-tH-mH).toFixed(1);
+  };
+
+  const rebuildTests = () => {
+    const list = det.querySelector(`#et-list-${i}`);
+    list.innerHTML = ec.tests.map((t,ti)=>`
+      <div class="row-item etest-grid">
+        <input class="et-name sm" value="${(t.name||"").replace(/"/g,"&quot;")}">
+        <select class="et-type sm">${typeOpts(t.type)}</select>
+        <input class="et-hrs sm" type="number" min="0" max="24" step="0.5" value="${t.hours||""}">
+        <button class="rm-btn" data-ti="${ti}"><i class="ti ti-x"></i></button>
+      </div>`).join("");
+    list.querySelectorAll(".et-name").forEach((inp,ti)=>{ inp.oninput=()=>{ec.tests[ti].name=inp.value;}; });
+    list.querySelectorAll(".et-type").forEach((sel,ti)=>{ sel.onchange=()=>{ec.tests[ti].type=sel.value;ec.tests[ti].category=MANUAL_TYPES.includes(sel.value)?"Manual":"Automation";}; });
+    list.querySelectorAll(".et-hrs").forEach((inp,ti)=>{ inp.oninput=()=>{ec.tests[ti].hours=parseFloat(inp.value)||0;recalc();}; });
+    list.querySelectorAll(".rm-btn").forEach(btn=>{ btn.onclick=()=>{const ti=+btn.dataset.ti;ec.tests.splice(ti,1);recalc();rebuildTests();}; });
+  };
+
+  const rebuildMeets = () => {
+    const list = det.querySelector(`#em-list-${i}`);
+    list.innerHTML = ec.meetings.map((m,mi)=>`
+      <div class="row-item emeet-grid">
+        <input class="em-name sm" value="${(m.name||"").replace(/"/g,"&quot;")}">
+        <select class="em-mtype sm">${MEETING_TYPES.map(x=>`<option ${m.mtype===x?"selected":""}>${x}</option>`).join("")}</select>
+        <input class="em-hrs sm" type="number" min="0" max="24" step="0.5" value="${m.hours||""}">
+        <button class="rm-btn" data-mi="${mi}"><i class="ti ti-x"></i></button>
+      </div>`).join("");
+    list.querySelectorAll(".em-name").forEach((inp,mi)=>{ inp.oninput=()=>{ec.meetings[mi].name=inp.value;}; });
+    list.querySelectorAll(".em-mtype").forEach((sel,mi)=>{ sel.onchange=()=>{ec.meetings[mi].mtype=sel.value;}; });
+    list.querySelectorAll(".em-hrs").forEach((inp,mi)=>{ inp.oninput=()=>{ec.meetings[mi].hours=parseFloat(inp.value)||0;recalc();}; });
+    list.querySelectorAll(".rm-btn").forEach(btn=>{ btn.onclick=()=>{const mi=+btn.dataset.mi;ec.meetings.splice(mi,1);recalc();rebuildMeets();}; });
+  };
+
+  det.querySelector(".ed-name").onchange=e=>{ec.name=e.target.value;};
+  det.querySelector(".ed-date").oninput=e=>{ec.date=e.target.value;};
+  det.querySelector(".ed-team").onchange=e=>{ec.team=e.target.value;};
+  det.querySelector(".ed-wd").oninput=e=>{ec.workday=parseFloat(e.target.value)||9;recalc();};
+  det.querySelector(".et-add").onclick=()=>{ec.tests.push({_id:uid(),name:"",type:MANUAL_TYPES[0],category:"Manual",hours:0});rebuildTests();};
+  det.querySelector(".em-add").onclick=()=>{ec.meetings.push({_id:uid(),name:"",mtype:MEETING_TYPES[0],hours:0});rebuildMeets();};
+
+  det.querySelector(".ed-save").onclick=async()=>{
+    recalc();
+    const clean = {...ec, tests:ec.tests.map(({_id,...r})=>r), meetings:ec.meetings.map(({_id,...r})=>r)};
+    await updateSubmission(clean);
+    expandedId = null;
+    showToast("Entry saved!");
+    if (!firebaseReady) { loadSubmissions().then(subs=>{ masterSubs=subs; renderMasterContent(); }); }
+  };
+
+  det.querySelector(".ed-del").onclick=async()=>{
+    if (!confirm("Delete this submission?")) return;
+    await deleteSubmission(s.id);
+    expandedId = null;
+    showToast("Entry deleted.");
+    if (!firebaseReady) { loadSubmissions().then(subs=>{ masterSubs=subs; renderMasterContent(); }); }
+  };
+
+  rebuildTests(); rebuildMeets();
+}
+
+function exportCSV() {
+  if (!masterSubs.length) { showToast("No submissions to export."); return; }
+  const rows = [["Associate","Date","Team","Work Hrs","Testing Hrs","Meeting Hrs","Other Hrs","Testing Item","Category","Test Type","Test Hours","Meeting Name","Meeting Type","Meeting Hours"]];
+  masterSubs.forEach(s=>{
+    const ts=s.tests||[],ms=s.meetings||[];
+    const max=Math.max(ts.length,ms.length,1);
+    for(let i=0;i<max;i++){
+      const t=ts[i]||{},m=ms[i]||{};
+      rows.push([i===0?s.name:"",i===0?s.date:"",i===0?s.team:"",i===0?s.workday:"",i===0?s.testingHrs:"",i===0?s.meetingHrs:"",i===0?s.otherHrs:"",t.name||"",t.category||"",t.type||"",t.hours||"",m.name||"",m.mtype||"",m.hours||""]);
+    }
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=`productivity_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); showToast("CSV exported!");
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────
+function typeOpts(sel) {
+  return `<optgroup label="Manual testing">${MANUAL_TYPES.map(t=>`<option value="${t}" ${sel===t?"selected":""}>${t}</option>`).join("")}</optgroup><optgroup label="Automation testing">${AUTO_TYPES.map(t=>`<option value="${t}" ${sel===t?"selected":""}>${t}</option>`).join("")}</optgroup>`;
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────
+render();
+</script>
+</body>
 </html>
