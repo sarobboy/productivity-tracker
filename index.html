@@ -15,8 +15,15 @@
     //  e.g.  ["John", "Priya", "David", "Sara"]
 
     // ── 2. Teams ────────────────────────────────────────────────────
-    const TEAMS = ["Team Ruby"];
+    const TEAMS = ["Team Ruby", "Team Nick", "Team Vlad"];
     //  e.g.  ["Team Ruby", "Team Alpha", "Team Beta"]
+
+    // ── 2b. Associate → Team mapping ────────────────────────────────
+    const ASSOCIATE_TEAMS = {
+      "A": "Team Ruby",
+      "B": "Team Nick",
+      "C": "Team Vlad"
+    };
 
     // ── 3. Master PIN ───────────────────────────────────────────────
     const MASTER_PIN = "1234";
@@ -367,6 +374,9 @@ function renderAssociateForm() {
   };
 
   wrap.innerHTML = `
+    <div style="margin-bottom:1rem">
+      <button class="btn btn-outline" id="btn-back"><i class="ti ti-arrow-left"></i> Back</button>
+    </div>
     <h1><i class="ti ti-chart-bar"></i> Daily productivity log</h1>
     <p class="subtitle">Fill in all your details and click Submit. Data goes directly to the master dashboard.</p>
     ${!firebaseReady ? `<div class="setup-notice"><strong>⚠️ Firebase not configured</strong>Data will be saved locally on this device only. To sync across devices, add your Firebase config in the HTML file.</div>` : ""}
@@ -381,7 +391,7 @@ function renderAssociateForm() {
       </div>
       <div class="row2">
         <div class="field"><label>Team / project<span class="req">*</span></label>
-          <select id="sel-team"><option value="">Select team…</option>${TEAMS.map(t=>`<option>${t}</option>`).join("")}</select></div>
+          <input type="text" id="sel-team" readonly placeholder="Auto-filled when name is selected" style="background:#f5f5f0;color:#555;cursor:default;"></div>
         <div class="field"><label>Total work hours</label>
           <input type="number" id="wd" min="1" max="24" step="0.5" value="9"></div>
       </div>
@@ -418,6 +428,12 @@ function renderAssociateForm() {
       <button class="btn-submit" id="btn-submit"><i class="ti ti-send"></i> Submit</button>
     </div>`;
 
+  wrap.querySelector("#btn-back").onclick = () => { aTests = []; aMeetings = []; currentView = "landing"; render(); };
+  wrap.querySelector("#sel-name").onchange = e => {
+    const selected = e.target.value;
+    const teamInput = wrap.querySelector("#sel-team");
+    teamInput.value = ASSOCIATE_TEAMS[selected] || "";
+  };
   wrap.querySelector("#wd").oninput = calcHours;
   wrap.querySelector("#add-test").onclick = () => { aTests.push({ id: uid(), name: "", type: MANUAL_TYPES[0], hours: "" }); rebuildTests(); };
   wrap.querySelector("#add-meet").onclick = () => { aMeetings.push({ id: uid(), name: "", mtype: MEETING_TYPES[0], hours: "" }); rebuildMeetings(); };
